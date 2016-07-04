@@ -44,6 +44,10 @@ typedef enum httpc_state_t {
 #define HTTP_HEAD_WM_HIGH 4096  // that should be enough for one HTTP line.
 
 
+#define MAX_SERVER_NAME (253)    /* Max DNS is 253 characters */
+#define MAX_PORT_STR_LENGTH (6)  /* Ports are 5 digits decimax max */
+#define MAX_CONNECT_HOST_LENGTH (MAX_SERVER_NAME + MAX_PORT_STR_LENGTH + 1) /* Add one byte for \0 */
+
 static void httpc_client_init(redsocks_client *client)
 {
 	client->state = httpc_new;
@@ -222,6 +226,14 @@ static struct evbuffer *httpc_mkconnect(redsocks_client *client)
 
 	const char *auth_scheme = NULL;
 
+    char *hostname = NULL;
+
+    if (client->hostname) {
+        hostname = client->hostname;
+    } else {
+        hostname = inet_ntoa(client->destaddr.sin_addr);
+    }
+
 	if (auth->last_auth_query != NULL) {
 		/* find previous auth challange */
 
@@ -230,8 +242,8 @@ static struct evbuffer *httpc_mkconnect(redsocks_client *client)
 			auth_scheme = "Basic";
 		} else if (strncasecmp(auth->last_auth_query, "Digest", 6) == 0) {
 			/* calculate uri */
-			char uri[128];
-			snprintf(uri, 128, "%s:%u", inet_ntoa(client->destaddr.sin_addr), ntohs(client->destaddr.sin_port));
+			char uri[MAX_CONNECT_HOST_LENGTH] = {0};
+            snprintf(uri, MAX_CONNECT_HOST_LENGTH, "%s:%u", hostname, ntohs(client->destaddr.sin_port));
 
 			/* prepare an random string for cnounce */
 			char cnounce[17];
@@ -245,8 +257,9 @@ static struct evbuffer *httpc_mkconnect(redsocks_client *client)
 	}
 
 	// TODO: do accurate evbuffer_expand() while cleaning up http-auth
-	len = evbuffer_add_printf(buff, "CONNECT %s:%u HTTP/1.0\r\n",
-		inet_ntoa(client->destaddr.sin_addr),
+	len = evbuffer_add_printf(buff, 
+		"CONNECT %s:%u HTTP/1.0\r\n",
+		hostname,
 		ntohs(client->destaddr.sin_port));
 	if (len < 0) {
 		redsocks_log_errno(client, LOG_ERR, "evbufer_add_printf");
