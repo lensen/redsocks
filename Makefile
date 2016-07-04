@@ -10,7 +10,7 @@ SRCS := $(OBJS:.o=.c)
 CONF := config.h
 DEPS := .depend
 OUT := redsocks
-VERSION := 0.4.1-lensen
+VERSION := 0.4.2-lensen
 
 # -levent_extra is required only for `http` and `debug`
 # -levent_core may be used for space reduction
