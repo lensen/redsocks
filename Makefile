@@ -1,8 +1,5 @@
-LIBHTTP_VERSION := 2.6.0
-LIBHTTP_NAME := http-parser-$(LIBHTTP_VERSION)
-LIBHTTP_CFLAGS := -I./http-parser-$(LIBHTTP_VERSION) -L./http-parser-$(LIBHTTP_VERSION)
-
-OBJS := tls.o parser.o main.o redsocks.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o gen/version.o
+-include make.conf
+OBJS := tls.o parser.o main.o redsocks.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o gen/version.o http_parser.o
 ifeq ($(DBG_BUILD),1)
 OBJS += debug.o
 endif
@@ -10,12 +7,17 @@ SRCS := $(OBJS:.o=.c)
 CONF := config.h
 DEPS := .depend
 OUT := redsocks
-VERSION := 0.4.2-lensen
+VERSION := 0.5-lensen
+LIBHTTP_VERSION := 2.6.0
+LIBHTTP_NAME := http-parser-$(LIBHTTP_VERSION)
+LIBHTTP_CFLAGS := -I./http-parser-$(LIBHTTP_VERSION) -L./http-parser-$(LIBHTTP_VERSION)
 
+LIBS := -levent_core
+ifeq ($(DBG_BUILD),1)
 # -levent_extra is required only for `http` and `debug`
-# -levent_core may be used for space reduction
-LIBS := -levent -lhttp_parser
+LIBS := -levent_extra -lhttp_parser
 CFLAGS += $(LIBHTTP_CFLAGS)
+endif
 CFLAGS += -g -O2
 # _GNU_SOURCE is used to get splice(2), it also implies _BSD_SOURCE
 override CFLAGS += -std=c99 -D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE -D_GNU_SOURCE -Wall
@@ -32,10 +34,11 @@ $(LIBHTTP_NAME):
 	tar -zxf v$(LIBHTTP_VERSION).tar.gz
 	rm -f v$(LIBHTTP_VERSION).tar.gz
 
-$(LIBHTTP_NAME)/libhttp_parser.o:
-	cd $(LIBHTTP_NAME) && make package
+$(LIBHTTP_NAME)/http_parser.o:
+	cd $(LIBHTTP_NAME) && cp -pr http_parser.* ../ #make package && \
+#        cp -pr http_parser.* ../
 
-http-parser: $(LIBHTTP_NAME) $(LIBHTTP_NAME)/libhttp_parser.o
+http-parser: $(LIBHTTP_NAME) $(LIBHTTP_NAME)/http_parser.o
 
 $(CONF):
 	@case `uname` in \
