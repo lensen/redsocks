@@ -1,5 +1,5 @@
 -include make.conf
-OBJS := tls.o parser.o main.o redsocks.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o gen/version.o http_parser.o
+OBJS := tls.o parser.o main.o redsocks.o log.o http-connect.o socks4.o socks5.o http-relay.o base.o base64.o md5.o http-auth.o utils.o redudp.o dnstc.o gen/version.o
 ifeq ($(DBG_BUILD),1)
 OBJS += debug.o
 endif
@@ -15,9 +15,10 @@ LIBHTTP_CFLAGS := -I./http-parser-$(LIBHTTP_VERSION) -L./http-parser-$(LIBHTTP_V
 LIBS := -levent_core
 ifeq ($(DBG_BUILD),1)
 # -levent_extra is required only for `http` and `debug`
-LIBS := -levent_extra -lhttp_parser
-CFLAGS += $(LIBHTTP_CFLAGS)
+LIBS += -levent_extra
 endif
+LIBS += -lhttp_parser
+CFLAGS += $(LIBHTTP_CFLAGS)
 CFLAGS += -g -O2
 # _GNU_SOURCE is used to get splice(2), it also implies _BSD_SOURCE
 override CFLAGS += -std=c99 -D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE -D_GNU_SOURCE -Wall
@@ -29,16 +30,13 @@ all: $(OUT)
 tags: *.c *.h
 	ctags -R
 
-$(LIBHTTP_NAME):
-	wget https://github.com/nodejs/http-parser/archive/v$(LIBHTTP_VERSION).tar.gz
-	tar -zxf v$(LIBHTTP_VERSION).tar.gz
-	rm -f v$(LIBHTTP_VERSION).tar.gz
-
-$(LIBHTTP_NAME)/http_parser.o:
-	cd $(LIBHTTP_NAME) && cp -pr http_parser.* ../ #make package && \
-#        cp -pr http_parser.* ../
-
-http-parser: $(LIBHTTP_NAME) $(LIBHTTP_NAME)/http_parser.o
+libhttp_parser.a:
+	wget https://github.com/nodejs/http-parser/archive/v$(LIBHTTP_VERSION).tar.gz && \
+	tar -zxf v$(LIBHTTP_VERSION).tar.gz && \
+        rm -f v$(LIBHTTP_VERSION).tar.gz && \
+        cd $(LIBHTTP_NAME) && \
+        make package && \
+	cp -pr http_parser.h ../
 
 $(CONF):
 	@case `uname` in \
@@ -105,7 +103,7 @@ $(DEPS): $(SRCS)
 
 -include $(DEPS)
 
-$(OUT): http-parser $(OBJS)
+$(OUT): libhttp_parser.a $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS) $(LIBS)
 
 clean:
